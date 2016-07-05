@@ -1,8 +1,8 @@
 import binascii
 import collections
+import logging
 import struct
 import sys
-import logging
 from threading import Thread, Event
 
 import six
