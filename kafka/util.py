@@ -1,5 +1,7 @@
 import binascii
 import collections
+import logging
+import re
 import struct
 import sys
 from threading import Thread, Event
@@ -8,6 +10,7 @@ import six
 
 from kafka.common import BufferUnderflowError
 
+log = logging.getLogger(__name__)
 
 def crc32(data):
     return binascii.crc32(data) & 0xffffffff
@@ -94,12 +97,16 @@ def kafka_bytestring(s):
     Takes a string or bytes instance
     Returns bytes, encoding strings in utf-8 as necessary
     """
+    legalChars = '[^a-zA-Z0-9_.-]+'
+    if re.search(legalChars, s):
+        log.exception('ClientId contains invalid character')
+        raise ValueError('ClientId contains invalid character')
+
     if isinstance(s, six.binary_type):
         return s
     if isinstance(s, six.string_types):
         return s.encode('utf-8')
     raise TypeError(s)
-
 
 class ReentrantTimer(object):
     """
