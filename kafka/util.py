@@ -1,6 +1,7 @@
 import binascii
 import collections
 import logging
+import re
 import struct
 import sys
 from threading import Thread, Event
@@ -95,11 +96,9 @@ def kafka_bytestring(s):
     """
     Takes a string or bytes instance
     Returns bytes, encoding strings in utf-8 as necessary
-
-    error: contains invalid characters like ',' , ':'
     """
-    invalid_characters = {',', ':'}
-    if any(character in s for character in invalid_characters):
+    legalChars = '[^a-zA-Z0-9_.-]+'
+    if re.search(legalChars, s):
         log.exception('ClientId contains invalid character')
         raise ValueError('ClientId contains invalid character')
 

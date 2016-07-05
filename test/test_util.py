@@ -58,7 +58,7 @@ class UtilTest(unittest.TestCase):
         )
 
     def test_non_invalid_characters(self):
-        self.assertEqual('testingID', kafka.util.kafka_bytestring('testingID'))
+        self.assertEqual('testingID_test.test-test', kafka.util.kafka_bytestring('testingID_test.test-test'))
 
     def test_invalid_characters(self):
         with self.assertRaises(ValueError):
