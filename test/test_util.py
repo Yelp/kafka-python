@@ -57,6 +57,13 @@ class UtilTest(unittest.TestCase):
             b'\x00\x0bsome string'
         )
 
+    def test_non_invalid_characters(self):
+        self.assertEqual('testingID', kafka.util.kafka_bytestring('testingID'))
+
+    def test_invalid_characters(self):
+        with self.assertRaises(ValueError):
+          kafka.util.kafka_bytestring('testing:ID,test')
+
     def test_write_short_string__unicode(self):
         with self.assertRaises(TypeError) as cm:
             kafka.util.write_short_string(u'hello')
