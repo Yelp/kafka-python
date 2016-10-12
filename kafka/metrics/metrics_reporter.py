@@ -57,13 +57,21 @@ class AbstractMetricsReporter(object):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_emitter(self, metric):
+    def get_counter_emitter(self, metric, default_dimensions=None):
         """
-        Called to return an instance of an emitter
+        Called to return an instance of an Counter
 
         Arguments:
             metric (str): the name of the metric
         """
+
+    @abc.abstractmethod
+     def get_timer_emitter(self, metric, default_dimensions=None):
+         """
+         Called to return an instance of the Timer
+         """
+         raise NotImplementedError
+    
 
     @abc.abstractmethod
     def record(self, emitter, value, timestamp):
