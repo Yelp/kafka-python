@@ -66,7 +66,7 @@ class AbstractMetricsReporter(object):
         """
 
     @abc.abstractmethod
-     def get_timer_emitter(self, metric, default_dimensions=None):
+    def get_timer_emitter(self, metric, default_dimensions=None):
          """
          Called to return an instance of the Timer
          """
