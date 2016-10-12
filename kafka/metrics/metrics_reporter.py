@@ -70,8 +70,6 @@ class AbstractMetricsReporter(object):
          """
          Called to return an instance of the Timer
          """
-         raise NotImplementedError
-    
 
     @abc.abstractmethod
     def record(self, emitter, value, timestamp):
