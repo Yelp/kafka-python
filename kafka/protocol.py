@@ -515,7 +515,8 @@ class KafkaProtocol(object):
                                                   version=2))
         message.append(write_short_string(group))
         message.append(struct.pack('>i', -1))   # ConsumerGroupGenerationId
-        message.append(write_short_string(''))  # ConsumerId
+        message.append(write_short_string(b''))  # ConsumerId
+                                   `''))  # ConsumerId
         message.append(struct.pack('>q', -1))   # Retention time
         message.append(struct.pack('>i', len(grouped_payloads)))
 
