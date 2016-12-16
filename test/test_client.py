@@ -36,8 +36,11 @@ class TestSimpleClient(unittest.TestCase):
             client = SimpleClient(hosts=['kafka01:9092', 'kafka02:9092', 'kafka03:9092'])
 
         self.assertEqual(
-            sorted([('kafka01', 9092, socket.AF_UNSPEC), ('kafka02', 9092, socket.AF_UNSPEC),
-                    ('kafka03', 9092, socket.AF_UNSPEC)]),
+            sorted([
+                ('kafka01', 9092, socket.AF_UNSPEC, 'bootstrap'),
+                ('kafka02', 9092, socket.AF_UNSPEC, 'bootstrap'),
+                ('kafka03', 9092, socket.AF_UNSPEC, 'bootstrap'),
+            ]),
             sorted(client.hosts))
 
     def test_init_with_csv(self):
@@ -45,8 +48,11 @@ class TestSimpleClient(unittest.TestCase):
             client = SimpleClient(hosts='kafka01:9092,kafka02:9092,kafka03:9092')
 
         self.assertEqual(
-            sorted([('kafka01', 9092, socket.AF_UNSPEC), ('kafka02', 9092, socket.AF_UNSPEC),
-                    ('kafka03', 9092, socket.AF_UNSPEC)]),
+            sorted([
+                ('kafka01', 9092, socket.AF_UNSPEC, 'bootstrap'),
+                ('kafka02', 9092, socket.AF_UNSPEC, 'bootstrap'),
+                ('kafka03', 9092, socket.AF_UNSPEC, 'bootstrap'),
+            ]),
             sorted(client.hosts))
 
     def test_init_with_unicode_csv(self):
@@ -54,8 +60,11 @@ class TestSimpleClient(unittest.TestCase):
             client = SimpleClient(hosts=u'kafka01:9092,kafka02:9092,kafka03:9092')
 
         self.assertEqual(
-            sorted([('kafka01', 9092, socket.AF_UNSPEC), ('kafka02', 9092, socket.AF_UNSPEC),
-                    ('kafka03', 9092, socket.AF_UNSPEC)]),
+            sorted([
+                ('kafka01', 9092, socket.AF_UNSPEC, 'bootstrap'),
+                ('kafka02', 9092, socket.AF_UNSPEC, 'bootstrap'),
+                ('kafka03', 9092, socket.AF_UNSPEC, 'bootstrap'),
+            ]),
             sorted(client.hosts))
 
     @patch.object(SimpleClient, '_get_conn')
@@ -68,7 +77,7 @@ class TestSimpleClient(unittest.TestCase):
         for val in mocked_conns.values():
             mock_conn(val, success=False)
 
-        def mock_get_conn(host, port, afi):
+        def mock_get_conn(host, port, afi, nodeId):
             return mocked_conns[(host, port)]
         conn.side_effect = mock_get_conn
 
@@ -96,7 +105,7 @@ class TestSimpleClient(unittest.TestCase):
         mocked_conns[('kafka02', 9092)].send.return_value = future
         mocked_conns[('kafka02', 9092)].recv.side_effect = lambda: future.success('valid response')
 
-        def mock_get_conn(host, port, afi):
+        def mock_get_conn(host, port, afi, nodeId):
             return mocked_conns[(host, port)]
 
         # patch to avoid making requests before we want it
