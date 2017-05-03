@@ -238,6 +238,8 @@ class BrokerConnection(object):
                           ' and resolvable?'.format(
                              self.host, self.port, ex
                           ))
+                        # TODO: manpreet should we remove this?
+                        # self._gai = []
                     self._gai_index = 0
                 else:
                     # if self._gai already exists, then we should try the next
