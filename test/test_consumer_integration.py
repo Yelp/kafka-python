@@ -95,20 +95,18 @@ class TestConsumerIntegration(KafkaIntegrationTestCase):
                                  **configs)
         return consumer
 
-<<<<<<< HEAD
     def old_kafka_consumer(self, **configs):
         brokers = '%s:%d' % (self.server.host, self.server.port)
         consumer = OldKafkaConsumer(self.topic,
                                     bootstrap_servers=brokers,
                                     **configs)
         return consumer
-=======
+
     def kafka_producer(self, **configs):
         brokers = '%s:%d' % (self.server.host, self.server.port)
         producer = KafkaProducer(
             bootstrap_servers=brokers, **configs)
         return producer
->>>>>>> 39f0e50... Added basic support for offsets_for_times API. Still needs to group by nodes and send in parallel.
 
     def test_simple_consumer(self):
         self.send_messages(0, range(0, 100))
