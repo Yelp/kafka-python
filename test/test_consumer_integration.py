@@ -784,9 +784,9 @@ class TestConsumerIntegration(KafkaIntegrationTestCase):
 
     @kafka_versions('>=0.10.1')
     def test_kafka_consumer_offsets_for_time(self):
-        late_time = int(time.time())
-        middle_time = late_time - 1
-        early_time = late_time - 2
+        late_time = int(time.time()) * 1000
+        middle_time = late_time - 1000
+        early_time = late_time - 2000
         tp = TopicPartition(self.topic, 0)
 
         kafka_producer = self.kafka_producer()
