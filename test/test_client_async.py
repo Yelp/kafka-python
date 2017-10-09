@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division
+
 # selectors in stdlib as of py3.4
 try:
     import selectors # pylint: disable=import-error
@@ -10,7 +12,7 @@ import time
 
 import pytest
 
-from kafka.client_async import KafkaClient
+from kafka.client_async import KafkaClient, IdleConnectionManager
 from kafka.conn import ConnectionStates
 import kafka.errors as Errors
 from kafka.future import Future
@@ -295,7 +297,10 @@ def client(mocker):
     mocker.patch.object(KafkaClient, '_bootstrap')
     _poll = mocker.patch.object(KafkaClient, '_poll')
 
-    cli = KafkaClient(request_timeout_ms=9999999, retry_backoff_ms=2222, api_version=(0, 9))
+    cli = KafkaClient(request_timeout_ms=9999999,
+                      reconnect_backoff_ms=2222,
+                      connections_max_idle_ms=float('inf'),
+                      api_version=(0, 9))
 
     tasks = mocker.patch.object(cli._delayed_tasks, 'next_at')
     tasks.return_value = 9999999
@@ -308,7 +313,7 @@ def client(mocker):
 def test_maybe_refresh_metadata_ttl(mocker, client):
     client.cluster.ttl.return_value = 1234
 
-    client.poll(timeout_ms=9999999, sleep=True)
+    client.poll(timeout_ms=12345678, sleep=True)
     client._poll.assert_called_with(1.234, sleep=True)
 
 
@@ -316,17 +321,16 @@ def test_maybe_refresh_metadata_backoff(mocker, client):
     now = time.time()
     t = mocker.patch('time.time')
     t.return_value = now
-    client._last_no_node_available_ms = now * 1000
 
-    client.poll(timeout_ms=9999999, sleep=True)
-    client._poll.assert_called_with(2.222, sleep=True)
+    client.poll(timeout_ms=12345678, sleep=True)
+    client._poll.assert_called_with(2.222, sleep=True) # reconnect backoff
 
 
 def test_maybe_refresh_metadata_in_progress(mocker, client):
     client._metadata_refresh_in_progress = True
 
-    client.poll(timeout_ms=9999999, sleep=True)
-    client._poll.assert_called_with(9999.999, sleep=True)
+    client.poll(timeout_ms=12345678, sleep=True)
+    client._poll.assert_called_with(9999.999, sleep=True) # request_timeout_ms
 
 
 def test_maybe_refresh_metadata_update(mocker, client):
@@ -334,23 +338,35 @@ def test_maybe_refresh_metadata_update(mocker, client):
     mocker.patch.object(client, '_can_send_request', return_value=True)
     send = mocker.patch.object(client, 'send')
 
-    client.poll(timeout_ms=9999999, sleep=True)
-    client._poll.assert_called_with(0, sleep=True)
+    client.poll(timeout_ms=12345678, sleep=True)
+    client._poll.assert_called_with(9999.999, sleep=True) # request_timeout_ms
     assert client._metadata_refresh_in_progress
     request = MetadataRequest[0]([])
-    send.assert_called_with('foobar', request)
+    send.assert_called_once_with('foobar', request)
 
 
-def test_maybe_refresh_metadata_failure(mocker, client):
+def test_maybe_refresh_metadata_cant_send(mocker, client):
     mocker.patch.object(client, 'least_loaded_node', return_value='foobar')
+    mocker.patch.object(client, '_can_connect', return_value=True)
+    mocker.patch.object(client, '_maybe_connect', return_value=True)
 
     now = time.time()
     t = mocker.patch('time.time')
     t.return_value = now
 
-    client.poll(timeout_ms=9999999, sleep=True)
-    client._poll.assert_called_with(0, sleep=True)
-    assert client._last_no_node_available_ms == now * 1000
+    # first poll attempts connection
+    client.poll(timeout_ms=12345678, sleep=True)
+    client._poll.assert_called_with(2.222, sleep=True) # reconnect backoff
+    client._can_connect.assert_called_once_with('foobar')
+    client._maybe_connect.assert_called_once_with('foobar')
+
+    # poll while connecting should not attempt a new connection
+    client._connecting.add('foobar')
+    client._can_connect.reset_mock()
+    client.poll(timeout_ms=12345678, sleep=True)
+    client._poll.assert_called_with(9999.999, sleep=True) # connection timeout (request timeout)
+    assert not client._can_connect.called
+
     assert not client._metadata_refresh_in_progress
 
 
@@ -360,3 +376,32 @@ def test_schedule():
 
 def test_unschedule():
     pass
+
+
+def test_idle_connection_manager(mocker):
+    t = mocker.patch.object(time, 'time')
+    t.return_value = 0
+
+    idle = IdleConnectionManager(100)
+    assert idle.next_check_ms() == float('inf')
+
+    idle.update('foo')
+    assert not idle.is_expired('foo')
+    assert idle.poll_expired_connection() is None
+    assert idle.next_check_ms() == 100
+
+    t.return_value = 90 / 1000
+    assert not idle.is_expired('foo')
+    assert idle.poll_expired_connection() is None
+    assert idle.next_check_ms() == 10
+
+    t.return_value = 100 / 1000
+    assert idle.is_expired('foo')
+    assert idle.next_check_ms() == 0
+
+    conn_id, conn_ts = idle.poll_expired_connection()
+    assert conn_id == 'foo'
+    assert conn_ts == 0
+
+    idle.remove('foo')
+    assert idle.next_check_ms() == float('inf')

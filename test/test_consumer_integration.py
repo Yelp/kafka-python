@@ -1,16 +1,19 @@
 import logging
 import os
+import time
 
 from six.moves import xrange
 import six
 
 from . import unittest
 from kafka import (
-    KafkaConsumer, MultiProcessConsumer, OldKafkaConsumer, SimpleConsumer,
-    create_message, create_gzip_message
+    KafkaConsumer, MultiProcessConsumer, OldKafkaConsumer,SimpleConsumer,
+    create_message, create_gzip_message, KafkaProducer
 )
 from kafka.consumer.base import MAX_FETCH_BUFFER_SIZE_BYTES
-from kafka.errors import ConsumerFetchSizeTooSmall, OffsetOutOfRangeError, ConsumerTimeout
+from kafka.errors import (
+    ConsumerFetchSizeTooSmall, OffsetOutOfRangeError, ConsumerTimeout, UnsupportedVersionError
+)
 from kafka.structs import ProduceRequestPayload, TopicPartition
 
 from test.fixtures import ZookeeperFixture, KafkaFixture
@@ -95,6 +98,12 @@ class TestConsumerIntegration(KafkaIntegrationTestCase):
                                     bootstrap_servers=brokers,
                                     **configs)
         return consumer
+
+    def kafka_producer(self, **configs):
+        brokers = '%s:%d' % (self.server.host, self.server.port)
+        producer = KafkaProducer(
+            bootstrap_servers=brokers, **configs)
+        return producer
 
     def test_simple_consumer(self):
         self.send_messages(0, range(0, 100))
@@ -360,8 +369,14 @@ class TestConsumerIntegration(KafkaIntegrationTestCase):
         # Produce 10 messages that are large (bigger than default fetch size)
         large_messages = self.send_messages(0, [ random_string(5000) for x in range(10) ])
 
-        # Consumer should still get all of them
-        consumer = self.consumer()
+        # Brokers prior to 0.11 will return the next message
+        # if it is smaller than max_bytes (called buffer_size in SimpleConsumer)
+        # Brokers 0.11 and later that store messages in v2 format
+        # internally will return the next message only if the
+        # full MessageSet is smaller than max_bytes.
+        # For that reason, we set the max buffer size to a little more
+        # than the size of all large messages combined
+        consumer = self.consumer(max_buffer_size=60000)
 
         expected_messages = set(small_messages + large_messages)
         actual_messages = set([ x.message.value for x in consumer ])
@@ -377,7 +392,7 @@ class TestConsumerIntegration(KafkaIntegrationTestCase):
         # Create a consumer with the default buffer size
         consumer = self.consumer()
 
-        # This consumer failes to get the message
+        # This consumer fails to get the message
         with self.assertRaises(ConsumerFetchSizeTooSmall):
             consumer.get_message(False, 0.1)
 
@@ -730,20 +745,17 @@ class TestConsumerIntegration(KafkaIntegrationTestCase):
         # Start a consumer
         consumer = self.kafka_consumer(
             auto_offset_reset='earliest', fetch_max_bytes=300)
-        fetched_size = 0
         seen_partitions = set([])
         for i in range(10):
             poll_res = consumer.poll(timeout_ms=100)
             for partition, msgs in six.iteritems(poll_res):
                 for msg in msgs:
-                    fetched_size += len(msg.value)
                     seen_partitions.add(partition)
 
         # Check that we fetched at least 1 message from both partitions
         self.assertEqual(
             seen_partitions, set([
                 TopicPartition(self.topic, 0), TopicPartition(self.topic, 1)]))
-        self.assertLess(fetched_size, 3000)
 
     @kafka_versions('>=0.10.1')
     def test_kafka_consumer_max_bytes_one_msg(self):
@@ -752,20 +764,56 @@ class TestConsumerIntegration(KafkaIntegrationTestCase):
         self.send_messages(0, range(100, 200))
 
         # Start a consumer. FetchResponse_v3 should always include at least 1
-        # full msg, so by setting fetch_max_bytes=1 we must get 1 msg at a time
+        # full msg, so by setting fetch_max_bytes=1 we should get 1 msg at a time
+        # But 0.11.0.0 returns 1 MessageSet at a time when the messages are
+        # stored in the new v2 format by the broker.
+        #
+        # DP Note: This is a strange test. The consumer shouldn't care
+        # how many messages are included in a FetchResponse, as long as it is
+        # non-zero. I would not mind if we deleted this test. It caused
+        # a minor headache when testing 0.11.0.0.
         group = 'test-kafka-consumer-max-bytes-one-msg-' + random_string(5)
         consumer = self.kafka_consumer(
             group_id=group,
             auto_offset_reset='earliest',
+            consumer_timeout_ms=5000,
             fetch_max_bytes=1)
-        fetched_msgs = []
-        # A bit hacky, but we need this in order for message count to be exact
-        consumer._coordinator.ensure_active_group()
-        for i in range(10):
-            poll_res = consumer.poll(timeout_ms=2000)
-            print(poll_res)
-            for partition, msgs in six.iteritems(poll_res):
-                for msg in msgs:
-                    fetched_msgs.append(msg)
 
+        fetched_msgs = [next(consumer) for i in range(10)]
         self.assertEqual(len(fetched_msgs), 10)
+
+    @kafka_versions('>=0.10.1')
+    def test_kafka_consumer_offsets_for_time(self):
+        late_time = int(time.time()) * 1000
+        middle_time = late_time - 1000
+        early_time = late_time - 2000
+        tp = TopicPartition(self.topic, 0)
+
+        kafka_producer = self.kafka_producer()
+        early_msg = kafka_producer.send(
+            self.topic, partition=0, value=b"first",
+            timestamp_ms=early_time).get()
+        late_msg = kafka_producer.send(
+            self.topic, partition=0, value=b"last",
+            timestamp_ms=late_time).get()
+
+        consumer = self.kafka_consumer()
+        offsets = consumer.offsets_for_times({tp: early_time})
+        self.assertEqual(offsets[tp].offset, early_msg.offset)
+        self.assertEqual(offsets[tp].timestamp, early_time)
+
+        offsets = consumer.offsets_for_times({tp: middle_time})
+        self.assertEqual(offsets[tp].offset, late_msg.offset)
+        self.assertEqual(offsets[tp].timestamp, late_time)
+
+        offsets = consumer.offsets_for_times({tp: late_time})
+        self.assertEqual(offsets[tp].offset, late_msg.offset)
+        self.assertEqual(offsets[tp].timestamp, late_time)
+
+    @kafka_versions('<0.10.1')
+    def test_kafka_consumer_offsets_for_time_old(self):
+        consumer = self.kafka_consumer()
+        tp = TopicPartition(self.topic, 0)
+
+        with self.assertRaises(UnsupportedVersionError):
+            consumer.offsets_for_times({tp: int(time.time())})
