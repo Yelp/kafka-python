@@ -2,7 +2,7 @@ kafka-python
 ############
 
 .. image:: https://img.shields.io/badge/kafka-0.10%2C%200.9%2C%200.8.2%2C%200.8.1%2C%200.8-brightgreen.svg
-    :target: https://kafka-python.readthedocs.org/compatibility.html
+    :target: https://kafka-python.readthedocs.io/compatibility.html
 .. image:: https://img.shields.io/pypi/pyversions/kafka-python.svg
     :target: https://pypi.python.org/pypi/kafka-python
 .. image:: https://coveralls.io/repos/dpkp/kafka-python/badge.svg?branch=master&service=github
@@ -107,6 +107,16 @@ client. See `KafkaProducer <apidoc/KafkaProducer.html>`_ for more details.
 >>> producer = KafkaProducer(compression_type='gzip')
 >>> for i in range(1000):
 ...     producer.send('foobar', b'msg %d' % i)
+
+
+Thread safety
+*************
+
+The KafkaProducer can be used across threads without issue, unlike the
+KafkaConsumer which cannot.
+
+While it is possible to use the KafkaConsumer in a thread-local manner,
+multiprocessing is recommended.
 
 
 Compression

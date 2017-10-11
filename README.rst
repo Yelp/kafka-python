@@ -2,7 +2,7 @@ Kafka Python client
 ------------------------
 
 .. image:: https://img.shields.io/badge/kafka-0.10%2C%200.9%2C%200.8.2%2C%200.8.1%2C%200.8-brightgreen.svg
-    :target: https://kafka-python.readthedocs.org/compatibility.html
+    :target: https://kafka-python.readthedocs.io/compatibility.html
 .. image:: https://img.shields.io/pypi/pyversions/kafka-python.svg
     :target: https://pypi.python.org/pypi/kafka-python
 .. image:: https://coveralls.io/repos/dpkp/kafka-python/badge.svg?branch=master&service=github
@@ -26,7 +26,7 @@ check code (perhaps using zookeeper or consul). For older brokers, you can
 achieve something similar by manually assigning different partitions to each
 consumer instance with config management tools like chef, ansible, etc. This
 approach will work fine, though it does not support rebalancing on failures.
-See <http://kafka-python.readthedocs.org/en/master/compatibility.html>
+See <https://kafka-python.readthedocs.io/en/master/compatibility.html>
 for more details.
 
 Please note that the master branch may contain unreleased features. For release
@@ -41,7 +41,7 @@ KafkaConsumer is a high-level message consumer, intended to operate as similarly
 as possible to the official java client. Full support for coordinated
 consumer groups requires use of kafka brokers that support the Group APIs: kafka v0.9+.
 
-See <http://kafka-python.readthedocs.org/en/master/apidoc/KafkaConsumer.html>
+See <https://kafka-python.readthedocs.io/en/master/apidoc/KafkaConsumer.html>
 for API and configuration details.
 
 The consumer iterator returns ConsumerRecords, which are simple namedtuples
@@ -76,7 +76,7 @@ KafkaProducer
 
 KafkaProducer is a high-level, asynchronous message producer. The class is
 intended to operate as similarly as possible to the official java client.
-See <http://kafka-python.readthedocs.org/en/master/apidoc/KafkaProducer.html>
+See <https://kafka-python.readthedocs.io/en/master/apidoc/KafkaProducer.html>
 for more details.
 
 >>> from kafka import KafkaProducer
@@ -110,14 +110,22 @@ for more details.
 >>> for i in range(1000):
 ...     producer.send('foobar', b'msg %d' % i)
 
+Thread safety
+*************
+
+The KafkaProducer can be used across threads without issue, unlike the
+KafkaConsumer which cannot.
+
+While it is possible to use the KafkaConsumer in a thread-local manner,
+multiprocessing is recommended.
+
 Compression
 ***********
 
-kafka-python supports gzip compression/decompression natively. To produce or
-consume lz4 compressed messages, you must install lz4tools and xxhash (modules
-may not work on python2.6). To enable snappy compression/decompression install
-python-snappy (also requires snappy library).
-See <http://kafka-python.readthedocs.org/en/master/install.html#optional-snappy-install>
+kafka-python supports gzip compression/decompression natively. To produce or consume lz4 
+compressed messages, you should install python-lz4 (pip install lz4). 
+To enable snappy compression/decompression install python-snappy (also requires snappy library).
+See <https://kafka-python.readthedocs.io/en/master/install.html#optional-snappy-install>
 for more information.
 
 Protocol
@@ -136,4 +144,4 @@ Low-level
 
 Legacy support is maintained for low-level consumer and producer classes,
 SimpleConsumer and SimpleProducer. See
-<http://kafka-python.readthedocs.io/en/master/simple.html?highlight=SimpleProducer> for API details.
+<https://kafka-python.readthedocs.io/en/master/simple.html?highlight=SimpleProducer> for API details.
