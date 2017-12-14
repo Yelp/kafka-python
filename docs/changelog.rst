@@ -1,6 +1,24 @@
 Changelog
 =========
 
+1.3.3.post6 (Oct 5, 2017)
+##########################
+* Revert fix for rebalance not getting triggered (poll)
+
+1.3.3.post5 (Oct 2, 2017)
+##########################
+* Fix for rebalance not getting triggered (poll)
+
+1.3.3.post4 (Sept 20, 2017)
+##########################
+* Remove coveralls dependency
+
+
+1.3.3.post3 (Sept 19, 2017)
+##########################
+* Initialize metadata_snapshot correctly to avoid group rejoin after fixed metadata update
+* Fix seek logic used with poll method
+
 1.3.3.post2 (Apr 24, 2017)
 ##########################
 Fix locale-gen not found
