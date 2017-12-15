@@ -19,7 +19,7 @@ def test_buffer_close():
     msgset = MessageSet.decode(records.buffer())
     assert len(msgset) == 1
     (offset, size, msg) = msgset[0]
-    assert offset == 1234 
+    assert offset == 1234
     assert msg == orig_msg
 
     # Closing again should work fine
