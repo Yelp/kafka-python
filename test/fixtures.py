@@ -206,7 +206,7 @@ class KafkaFixture(Fixture):
             # Note that even though we specify the bind host in bracket notation, Kafka responds to the bootstrap
             # metadata request without square brackets later.
             if host is None:
-                host = "[::1]"
+                host = "::1"
             fixture = KafkaFixture(host, port, broker_id,
                                    zk_host, zk_port, zk_chroot,
                                    transport=transport,
