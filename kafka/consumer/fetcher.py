@@ -17,7 +17,6 @@ from kafka.protocol.message import PartialMessage
 from kafka.protocol.offset import (
     OffsetRequest, OffsetResetStrategy, UNKNOWN_OFFSET
 )
-from kafka.serializer import Deserializer
 from kafka.structs import TopicPartition, OffsetAndTimestamp
 
 log = logging.getLogger(__name__)
@@ -503,8 +502,7 @@ class Fetcher(six.Iterator):
 
                 if not msg.is_compressed():
                     yield self._parse_record(tp, offset, msg.timestamp, msg)
-
-                else:
+                elif msg.is_compressed():
                     # If relative offset is used, we need to decompress the entire message first
                     # to compute the absolute offset.
                     inner_mset = msg.decompress()
@@ -578,8 +576,7 @@ class Fetcher(six.Iterator):
             raise
 
     def _parse_record(self, tp, offset, timestamp, msg):
-        key = self._deserialize(self.config['key_deserializer'], tp.topic, msg.key)
-        value = self._deserialize(self.config['value_deserializer'], tp.topic, msg.value)
+        key, value = self._deserialize(msg)
         return ConsumerRecord(tp.topic, tp.partition, offset,
                               timestamp, msg.timestamp_type,
                               key, value, msg.crc,

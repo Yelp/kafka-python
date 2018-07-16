@@ -266,18 +266,18 @@ class BrokerConnection(object):
                                                        socket.AF_UNSPEC,
                                                        socket.SOCK_STREAM)
                     except socket.gaierror as ex:
-                    '''
-                    # TODO: re-consider this
-<<<<<<< HEAD
-                        raise socket.gaierror('getaddrinfo failed for {0}:{1}, '
-                          'exception was {2}. Is your advertised.host.name correct'
-                          ' and resolvable?'.format(
-                             self.host, self.port, ex
-                          ))
-                        # TODO: manpreet should we remove this?
-                        # self._gai = []
-=======
-                    '''
+                        '''
+                        # TODO: re-consider this
+                        <<<<<<< HEAD
+                            raise socket.gaierror('getaddrinfo failed for {0}:{1}, '
+                              'exception was {2}. Is your advertised.host.name correct'
+                              ' and resolvable?'.format(
+                                 self.host, self.port, ex
+                              ))
+                            # TODO: manpreet should we remove this?
+                            # self._gai = []
+                        =======
+                        '''
                         log.warning('DNS lookup failed for %s:%d,'
                                     ' exception was %s. Is your'
                                     ' advertised.listeners (called'
