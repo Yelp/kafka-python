@@ -158,6 +158,9 @@ class SubscriptionState(object):
         if self._user_assignment:
             raise IllegalStateError(self._SUBSCRIPTION_EXCEPTION_MESSAGE)
 
+        if isinstance(topics, six.string_types):
+            topics = [topics]
+
         if self.subscription == set(topics):
             log.warning("subscription unchanged by change_subscription(%s)",
                         topics)
@@ -169,6 +172,7 @@ class SubscriptionState(object):
         log.info('Updating subscribed topics to: %s', topics)
         self.subscription = set(topics)
         self._group_subscription.update(topics)
+        # TODO: manpreet make sure this is removed in 1.4.3
         self.needs_partition_assignment = True
 
         # Remove any assigned partitions which are no longer subscribed to

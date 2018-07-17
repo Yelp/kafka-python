@@ -296,12 +296,12 @@ def test_partition_records_offset():
                                None, None, 'key', 'value', 'checksum', 0, 0)
                 for i in range(batch_start, batch_end)]
     records = Fetcher.PartitionRecords(fetch_offset, None, messages)
-    assert records.has_more()
+    assert len(records) > 0
     msgs = records.take(1)
     assert msgs[0].offset == 123
     assert records.fetch_offset == 124
     msgs = records.take(2)
     assert len(msgs) == 2
-    assert records.has_more()
+    assert len(records) > 0
     records.discard()
-    assert not records.has_more()
+    assert len(records) == 0
