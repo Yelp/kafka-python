@@ -9,7 +9,6 @@ import pytest
 from . import unittest
 
 from kafka import SimpleClient, create_message
-from kafka.client_async import KafkaClient
 from kafka.errors import LeaderNotAvailableError, KafkaTimeoutError, InvalidTopicError
 from kafka.structs import OffsetRequestPayload, ProduceRequestPayload, \
                           NotLeaderForPartitionError, UnknownTopicOrPartitionError, \
@@ -119,7 +118,6 @@ class KafkaIntegrationTestCase(unittest.TestCase):
 
         if self.create_client:
             self.client = SimpleClient('%s:%d' % (self.server.host, self.server.port))
-            self.client_async = KafkaClient(bootstrap_servers='%s:%d' % (self.server.host, self.server.port))
 
         timeout = time.time() + 30
         while time.time() < timeout:
