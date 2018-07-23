@@ -319,7 +319,9 @@ class SimpleClient(object):
                 conn = key.data
                 future, _ = futures_by_connection[conn]
                 while not future.is_done:
-                    conn.recv()
+                    for r, f in conn.recv():
+                        f.success(r)
+
                 _, broker = futures_by_connection.pop(conn)
 
                 if future.failed():
@@ -416,9 +418,6 @@ class SimpleClient(object):
             while not future.is_done:
                 for r, f in conn.recv():
                     f.success(r)
-
-            while not future.is_done:
-                conn.recv()
 
             if future.failed():
                 failed_payloads(payloads)
