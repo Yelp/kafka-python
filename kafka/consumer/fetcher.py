@@ -365,7 +365,7 @@ class Fetcher(six.Iterator):
             elif fetch_offset == position:
                 # we are ensured to have at least one record since we already checked for emptiness
                 part_records = part.take(max_records)
-                next_offset = part_records[-1].offset + 1
+                next_offset = part.fetch_offset
 
                 log.log(0, "Returning fetched records at offset %d for assigned"
                            " partition %s and update position to %s", position,
