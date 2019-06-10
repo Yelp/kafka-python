@@ -4,7 +4,7 @@ from mock import MagicMock, patch
 from . import unittest
 import pytest
 
-from kafka import SimpleConsumer, KafkaConsumer, MultiProcessConsumer, OldKafkaConsumer
+from kafka import SimpleConsumer, KafkaConsumer, MultiProcessConsumer
 from kafka.errors import (
     FailedPayloadsError, KafkaConfigurationError, NotLeaderForPartitionError,
     UnknownTopicOrPartitionError)
@@ -33,9 +33,6 @@ class TestKafkaConsumer(unittest.TestCase):
         sub.add('fizz')
         assert consumer.subscription() == set(['foo'])
 
-    def test_broker_list_required(self):
-        with self.assertRaises(KafkaConfigurationError):
-            OldKafkaConsumer()
 
 class TestMultiProcessConsumer(unittest.TestCase):
     @unittest.skipIf(sys.platform.startswith('win'), 'test mocking fails on windows')

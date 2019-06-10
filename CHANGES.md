@@ -3,6 +3,8 @@ This release merges in changes from 1.4.5 and 1.4.6 upstream.
 The only key differences are we focus on py35 still instead of py36/py37, and
 we only build for versions 0.10.2.2 and 1.1.0 and 1.1.1
 
+We also remove support for the OldKafkaConsumer that we were using internally.
+
 # 1.4.6 (Apr 2, 2019)
 
 This is a patch release primarily focused on bugs related to concurrency,
