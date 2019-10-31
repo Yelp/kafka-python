@@ -107,11 +107,12 @@ class AdminClient(object):
 
     def _send_request(self, request):
         controller_id = self._send_controller_request()
-        if not self.client.ready(controller_id):
-            raise NodeNotReadyError(controller_id)
-        else:
-            return self._send(controller_id, request)
-        
+        while not self.client.ready(controller_id):
+            # poll until the connection to broker is ready, otherwise send()
+            # will fail with NodeNotReadyError
+            self.client.poll()
+        return self._send(controller_id, request)
+
     def create_partitions(
         self,
         new_partitions_infos,
