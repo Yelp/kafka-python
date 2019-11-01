@@ -758,6 +758,15 @@ def test_kafka_consumer_offsets_search_many_partitions(kafka_consumer, kafka_pro
     }
 
 
+@pytest.mark.skipif(env_kafka_version() >= (0, 10, 1), reason="Requires KAFKA_VERSION < 0.10.1")
+def test_kafka_consumer_offsets_for_time_old(kafka_consumer, topic):
+    consumer = kafka_consumer
+    tp = TopicPartition(topic, 0)
+
+    with pytest.raises(UnsupportedVersionError):
+        consumer.offsets_for_times({tp: int(time.time())})
+
+
 @pytest.mark.skipif(env_kafka_version() < (0, 10, 1), reason="Requires KAFKA_VERSION >= 0.10.1")
 def test_kafka_consumer_offsets_for_times_errors(kafka_consumer_factory, topic):
     consumer = kafka_consumer_factory(fetch_max_wait_ms=200,

@@ -208,7 +208,7 @@ class TestFailover(KafkaIntegrationTestCase):
         broker.close()
         return broker
 
-    def assert_message_count(self, topic, check_count, timeout=10,
+    def assert_message_count(self, topic, check_count, timeout=25,
                              partitions=None, at_least=False):
         hosts = ','.join(['%s:%d' % (broker.host, broker.port)
                           for broker in self.brokers])
