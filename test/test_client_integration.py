@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 from kafka.errors import KafkaTimeoutError
 from kafka.protocol import create_message
 from kafka.structs import (
@@ -7,7 +9,7 @@ from kafka.structs import (
     ProduceRequestPayload)
 
 from test.fixtures import ZookeeperFixture, KafkaFixture
-from test.testutil import KafkaIntegrationTestCase, kafka_versions
+from test.testutil import KafkaIntegrationTestCase, env_kafka_version
 
 
 class TestKafkaClientIntegration(KafkaIntegrationTestCase):
@@ -80,6 +82,7 @@ class TestKafkaClientIntegration(KafkaIntegrationTestCase):
     #   Offset Tests   #
     ####################
 
+    @pytest.mark.skipif(not env_kafka_version(), reason="No KAFKA_VERSION set")
     def test_commit_fetch_offsets(self):
         req = OffsetCommitRequestPayload(self.topic, 0, 42, 'metadata')
         (resp,) = self.client.send_offset_commit_request('group', [req])
@@ -91,7 +94,8 @@ class TestKafkaClientIntegration(KafkaIntegrationTestCase):
         self.assertEqual(resp.offset, 42)
         self.assertEqual(resp.metadata, '')  # Metadata isn't stored for now
 
-    @kafka_versions('>=0.9.0.0')
+
+    @pytest.mark.skipif(env_kafka_version() < (0, 9), reason='Unsupported Kafka Version')
     def test_commit_fetch_offsets_dual(self):
         req = OffsetCommitRequestPayload(self.topic, 0, 42, 'metadata')
         (resp,) = self.client.send_offset_commit_request_kafka('group', [req])
