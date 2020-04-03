@@ -10,6 +10,7 @@ tox==3.1.2
 pylint==1.8.2
 pytest-pylint==0.11.0
 pytest-mock==1.10.0
+setuptools<45.0.0
 sphinx-rtd-theme==0.2.4
 mock==2.0.0
 decorator==4.3.0
