@@ -821,11 +821,12 @@ class Fetcher(six.Iterator):
                               " offset %d to buffered record list", tp,
                               position)
                     unpacked = list(self._unpack_message_set(tp, records))
-                    parsed_records = self.PartitionRecords(fetch_offset, tp, unpacked)
-                    last_offset = unpacked[-1].offset
-                    self._sensors.records_fetch_lag.record(highwater - last_offset)
-                    num_bytes = records.valid_bytes()
-                    records_count = len(unpacked)
+                    if unpacked:
+                        parsed_records = self.PartitionRecords(fetch_offset, tp, unpacked)
+                        last_offset = unpacked[-1].offset
+                        self._sensors.records_fetch_lag.record(highwater - last_offset)
+                        num_bytes = records.valid_bytes()
+                        records_count = len(unpacked)
                 elif records.size_in_bytes() > 0:
                     # we did not read a single message from a non-empty
                     # buffer because that message's size is larger than
