@@ -76,7 +76,7 @@ class SimpleClient(object):
     # socket timeout.
     def __init__(self, hosts, client_id=CLIENT_ID,
                  timeout=DEFAULT_SOCKET_TIMEOUT_SECONDS,
-                 correlation_id=0, metrics=None):
+                 correlation_id=0, metrics=None, **kwargs):
         # We need one connection to bootstrap
         self.client_id = client_id
         self.timeout = timeout
@@ -89,6 +89,10 @@ class SimpleClient(object):
         self.brokers = {}            # broker_id -> BrokerMetadata
         self.topics_to_brokers = {}  # TopicPartition -> BrokerMetadata
         self.topic_partitions = {}   # topic -> partition -> leader
+
+        # Support arbitrary kwargs to be provided as config to BrokerConnection
+        # This will allow advanced features like Authentication to work
+        self.config = kwargs
 
         self.load_metadata_for_topics()  # bootstrap with all metadata
 
@@ -108,6 +112,7 @@ class SimpleClient(object):
                 metrics=self._metrics_registry,
                 metric_group_prefix='simple-client',
                 node_id=node_id,
+                **self.config,
             )
 
         conn = self._conns[host_key]
