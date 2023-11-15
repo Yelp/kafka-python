@@ -1,5 +1,9 @@
 import datetime
 import json
+import sys
+
+import pytest
+from unittest import TestCase
 
 from kafka.msk import AwsMskIamClient
 
@@ -9,59 +13,38 @@ except ImportError:
     import mock
 
 
-def client_factory(token=None):
-    now = datetime.datetime.utcfromtimestamp(1629321911)
-    with mock.patch('kafka.msk.datetime') as mock_dt:
-        mock_dt.datetime.utcnow = mock.Mock(return_value=now)
-        return AwsMskIamClient(
-            host='localhost',
-            access_key='XXXXXXXXXXXXXXXXXXXX',
-            secret_key='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-            region='us-east-1',
-            token=token,
-        )
+@pytest.fixture(params=[{'session_token': 'session_token', 'host': 'localhost'}, {'session_token': None, 'host': 'localhost.us-east-1.amazonaws.com'}])
+def msk_client(request):
+    # To avoid a package dependency on the optional botocore library, we mock the module out
+    sys.modules['botocore.session'] = mock.MagicMock()
+    from botocore.session import Session  # pylint: disable=import-error
+
+    session = Session()
+    session.get_credentials = mock.MagicMock(return_value=mock.MagicMock(id='the_actual_credentials', access_key='akia', secret_key='secret', token=request.param['session_token']))
+    yield AwsMskIamClient(
+        host=request.param["host"],
+        boto_session = session,
+    )
 
 
-def test_aws_msk_iam_client_permanent_credentials():
-    client = client_factory(token=None)
-    msg = client.first_message()
+def test_aws_msk_iam(msk_client):
+    msg = msk_client.first_message()
     assert msg
     assert isinstance(msg, bytes)
-    actual = json.loads(msg)
+    actual = json.loads(msg.decode('utf-8'))
 
     expected = {
         'version': '2020_10_22',
-        'host': 'localhost',
+        'host': msk_client.host,
         'user-agent': 'kafka-python',
         'action': 'kafka-cluster:Connect',
         'x-amz-algorithm': 'AWS4-HMAC-SHA256',
-        'x-amz-credential': 'XXXXXXXXXXXXXXXXXXXX/20210818/us-east-1/kafka-cluster/aws4_request',
-        'x-amz-date': '20210818T212511Z',
+        'x-amz-credential': '{}/{}/{}/kafka-cluster/aws4_request'.format(msk_client.access_key, datetime.datetime.utcnow().strftime('%Y%m%d'), 'us-west-2' if msk_client.host == 'localhost' else 'us-east-1'),
+        'x-amz-date': mock.ANY,
         'x-amz-signedheaders': 'host',
         'x-amz-expires': '900',
-        'x-amz-signature': '0fa42ae3d5693777942a7a4028b564f0b372bafa2f71c1a19ad60680e6cb994b',
+        'x-amz-signature': mock.ANY,
     }
-    assert actual == expected
-
-
-def test_aws_msk_iam_client_temporary_credentials():
-    client = client_factory(token='XXXXX')
-    msg = client.first_message()
-    assert msg
-    assert isinstance(msg, bytes)
-    actual = json.loads(msg)
-
-    expected = {
-        'version': '2020_10_22',
-        'host': 'localhost',
-        'user-agent': 'kafka-python',
-        'action': 'kafka-cluster:Connect',
-        'x-amz-algorithm': 'AWS4-HMAC-SHA256',
-        'x-amz-credential': 'XXXXXXXXXXXXXXXXXXXX/20210818/us-east-1/kafka-cluster/aws4_request',
-        'x-amz-date': '20210818T212511Z',
-        'x-amz-signedheaders': 'host',
-        'x-amz-expires': '900',
-        'x-amz-signature': 'b0619c50b7ecb4a7f6f92bd5f733770df5710e97b25146f97015c0b1db783b05',
-        'x-amz-security-token': 'XXXXX',
-    }
-    assert actual == expected
+    if msk_client.token:
+        expected['x-amz-security-token'] = msk_client.token
+    TestCase().assertEqual(actual, expected)
