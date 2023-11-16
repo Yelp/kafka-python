@@ -34,6 +34,11 @@ class AwsMskIamClient:
         self.host = host
         self.boto_session = boto_session
 
+        # This will raise if the region can't be determined
+        # Do this during init instead of waiting for failures downstream
+        if self.region:
+            pass
+
     @property
     def access_key(self):
         return self.boto_session.get_credentials().access_key
@@ -48,11 +53,21 @@ class AwsMskIamClient:
 
     @property
     def region(self):
-        # TODO: This logic is not perfect and should be revisited
+        # Try to get the region information from the broker hostname
         for host in self.host.split(','):
             if 'amazonaws.com' in host:
                 return host.split('.')[-3]
-        return 'us-west-2'
+
+        # If the region can't be determined from hostname, try the boto session
+        # This will only have a value if:
+        #  - `AWS_DEFAULT_REGION` environment variable is set
+        #  - `~/.aws/config` region variable is set
+        region = self.boto_session.get_config_variable('region')
+        if region:
+            return region
+
+        # Otherwise give up
+        raise Exception('Could not determine region from broker host(s) or aws configuration')
 
     @property
     def _credential(self):
