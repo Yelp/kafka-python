@@ -4,6 +4,7 @@ import hmac
 import json
 import string
 
+from kafka.errors import IllegalArgumentError
 from kafka.vendor.six.moves import urllib
 
 
@@ -67,7 +68,7 @@ class AwsMskIamClient:
             return region
 
         # Otherwise give up
-        raise Exception('Could not determine region from broker host(s) or aws configuration')
+        raise IllegalArgumentError('Could not determine region from broker host(s) or aws configuration')
 
     @property
     def _credential(self):

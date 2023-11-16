@@ -5,6 +5,7 @@ import sys
 import pytest
 from unittest import TestCase
 
+from kafka.errors import IllegalArgumentError
 from kafka.msk import AwsMskIamClient
 
 try:
@@ -81,13 +82,13 @@ def test_aws_msk_iam_no_region(boto_session):
     # No region from config
     boto_session.get_config_variable = mock.MagicMock(return_value=None)
 
-    with TestCase().assertRaises(Exception) as e:
+    with TestCase().assertRaises(IllegalArgumentError) as e:
         # No region from hostname
         msk_client = AwsMskIamClient(
             host='localhost',
             boto_session = boto_session,
         )
-    assert 'Could not determine region from broker host(s) or aws configuration' == str(e.exception)
+    assert 'IllegalArgumentError: Could not determine region from broker host(s) or aws configuration' == str(e.exception)
 
 
 @pytest.mark.parametrize('session_token', [(None), ('the_token')])
