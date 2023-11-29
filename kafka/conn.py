@@ -25,6 +25,7 @@ from kafka.vendor import six
 import kafka.errors as Errors
 from kafka.future import Future
 from kafka.metrics.stats import Avg, Count, Max, Rate
+from kafka.msk import AwsMskIamClient
 from kafka.oauth.abstract import AbstractTokenProvider
 from kafka.protocol.admin import SaslHandShakeRequest
 from kafka.protocol.commit import OffsetFetchRequest
@@ -81,6 +82,12 @@ except ImportError:
     gssapi = None
     GSSError = None
 
+# needed for AWS_MSK_IAM authentication:
+try:
+    from botocore.session import Session as BotoSession
+except ImportError:
+    # no botocore available, will disable AWS_MSK_IAM mechanism
+    BotoSession = None
 
 AFI_NAMES = {
     socket.AF_UNSPEC: "unspecified",
@@ -224,7 +231,7 @@ class BrokerConnection(object):
         'sasl_oauth_token_provider': None
     }
     SECURITY_PROTOCOLS = ('PLAINTEXT', 'SSL', 'SASL_PLAINTEXT', 'SASL_SSL')
-    SASL_MECHANISMS = ('PLAIN', 'GSSAPI', 'OAUTHBEARER')
+    SASL_MECHANISMS = ('PLAIN', 'GSSAPI', 'OAUTHBEARER', 'AWS_MSK_IAM')
 
     def __init__(self, host, port, afi, **configs):
         self.host = host
@@ -269,6 +276,11 @@ class BrokerConnection(object):
                 token_provider = self.config['sasl_oauth_token_provider']
                 assert token_provider is not None, 'sasl_oauth_token_provider required for OAUTHBEARER sasl'
                 assert callable(getattr(token_provider, "token", None)), 'sasl_oauth_token_provider must implement method #token()'
+
+            if self.config['sasl_mechanism'] == 'AWS_MSK_IAM':
+                assert BotoSession is not None, 'AWS_MSK_IAM requires the "botocore" package'
+                assert self.config['security_protocol'] == 'SASL_SSL', 'AWS_MSK_IAM requires SASL_SSL'
+
         # This is not a general lock / this class is not generally thread-safe yet
         # However, to avoid pushing responsibility for maintaining
         # per-connection locks to the upstream client, we will use this lock to
@@ -552,6 +564,8 @@ class BrokerConnection(object):
             return self._try_authenticate_gssapi(future)
         elif self.config['sasl_mechanism'] == 'OAUTHBEARER':
             return self._try_authenticate_oauth(future)
+        elif self.config['sasl_mechanism'] == 'AWS_MSK_IAM':
+            return self._try_authenticate_aws_msk_iam(future)
         else:
             return future.failure(
                 Errors.UnsupportedSaslMechanismError(
@@ -650,6 +664,40 @@ class BrokerConnection(object):
             return future.failure(error)
 
         log.info('%s: Authenticated as %s via PLAIN', self, self.config['sasl_plain_username'])
+        return future.success(True)
+
+    def _try_authenticate_aws_msk_iam(self, future):
+        session = BotoSession()
+        client = AwsMskIamClient(
+            host=self.host,
+            boto_session=session,
+        )
+
+        msg = client.first_message()
+        size = Int32.encode(len(msg))
+
+        err = None
+        close = False
+        with self._lock:
+            if not self._can_send_recv():
+                err = Errors.NodeNotReadyError(str(self))
+                close = False
+            else:
+                try:
+                    self._send_bytes_blocking(size + msg)
+                    data = self._recv_bytes_blocking(4)
+                    data = self._recv_bytes_blocking(struct.unpack('4B', data)[-1])
+                except (ConnectionError, TimeoutError) as e:
+                    log.exception("%s: Error receiving reply from server", self)
+                    err = Errors.KafkaConnectionError("%s: %s" % (self, e))
+                    close = True
+
+        if err is not None:
+            if close:
+                self.close(error=err)
+            return future.failure(err)
+
+        log.info('%s: Authenticated via AWS_MSK_IAM %s', self, data.decode('utf-8'))
         return future.success(True)
 
     def _try_authenticate_gssapi(self, future):
