@@ -9,9 +9,7 @@ endif
 all: test itest
 
 test:
-	tox -e py27
-	tox -e py35
-	tox -e py36
+	tox
 
 unit_test_docker:
 	docker build -t kafka_python_test .
