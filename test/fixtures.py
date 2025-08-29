@@ -10,8 +10,8 @@ import time
 import uuid
 
 import py
-from kafka.vendor.six.moves import urllib, range
-from kafka.vendor.six.moves.urllib.parse import urlparse  # pylint: disable=E0611,F0401
+import urllib
+from urllib.parse import urlparse
 
 from kafka import errors, KafkaConsumer, KafkaProducer, SimpleClient
 from kafka.client_async import KafkaClient

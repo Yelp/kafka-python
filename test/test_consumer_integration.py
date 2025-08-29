@@ -4,7 +4,6 @@ import time
 
 from mock import patch
 import pytest
-from kafka.vendor.six.moves import range
 
 from . import unittest
 from kafka import (

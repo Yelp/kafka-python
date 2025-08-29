@@ -5,7 +5,7 @@ import json
 import string
 
 from kafka.errors import IllegalArgumentError
-from kafka.vendor.six.moves import urllib
+import urllib.parse
 
 
 class AwsMskIamClient:

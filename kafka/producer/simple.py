@@ -4,8 +4,6 @@ from itertools import cycle
 import logging
 import random
 
-from kafka.vendor.six.moves import range
-
 from kafka.producer.base import Producer
 
 
