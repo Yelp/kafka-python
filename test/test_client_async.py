@@ -9,6 +9,7 @@ except ImportError:
 
 import socket
 import time
+from unittest import mock
 
 import pytest
 
@@ -220,12 +221,12 @@ def test_send(cli, conn):
     request = ProduceRequest[0](0, 0, [])
     assert request.expect_response() is False
     ret = cli.send(0, request)
-    assert conn.send.called_with(request)
+    conn.send.assert_any_call(request, blocking=False)
     assert isinstance(ret, Future)
 
     request = MetadataRequest[0]([])
     cli.send(0, request)
-    assert conn.send.called_with(request)
+    conn.send.assert_any_call(request, blocking=False)
 
 
 def test_poll(mocker):

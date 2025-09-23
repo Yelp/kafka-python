@@ -16,7 +16,7 @@ from kafka.protocol import CODEC_NONE
 from kafka.structs import (
     ProduceResponsePayload, RetryOptions, TopicPartition)
 
-from kafka.vendor.six.moves import queue, range
+import queue
 
 
 class TestKafkaProducer(unittest.TestCase):

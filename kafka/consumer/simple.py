@@ -9,8 +9,7 @@ import sys
 import time
 import warnings
 
-from kafka.vendor import six
-from kafka.vendor.six.moves import queue # pylint: disable=import-error
+import queue
 
 from kafka.consumer.base import (
     Consumer,
@@ -373,7 +372,7 @@ class SimpleConsumer(Consumer):
                       for p in self.fetch_offsets.keys())
         while partitions:
             requests = []
-            for partition, buffer_size in six.iteritems(partitions):
+            for partition, buffer_size in partitions.items():
                 requests.append(FetchRequestPayload(self.topic, partition,
                                                     self.fetch_offsets[partition],
                                                     buffer_size))

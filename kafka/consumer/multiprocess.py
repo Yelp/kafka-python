@@ -6,7 +6,7 @@ from multiprocessing import Process, Manager as MPManager
 import time
 import warnings
 
-from kafka.vendor.six.moves import queue # pylint: disable=import-error
+import queue
 
 from kafka.errors import KafkaError
 from kafka.consumer.base import (
