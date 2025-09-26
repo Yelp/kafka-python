@@ -46,7 +46,7 @@ setup(
     description="Pure Python client for Apache Kafka",
     long_description=README,
     keywords="apache kafka",
-    python_requires=">=3.10",
+    python_requires=">=3.8",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
