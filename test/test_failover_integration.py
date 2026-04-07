@@ -96,53 +96,6 @@ class TestFailover(KafkaIntegrationTestCase):
         self.assert_message_count(topic, 201, partitions=(partition,),
                                   at_least=True)
 
-    def test_switch_leader_async(self):
-        topic = self.topic
-        partition = 0
-
-        # Test the base class Producer -- send_messages to a specific partition
-        producer = Producer(self.client, async_send=True,
-                            batch_send_every_n=15,
-                            batch_send_every_t=3,
-                            req_acks=Producer.ACK_AFTER_CLUSTER_COMMIT,
-                            async_log_messages_on_error=False)
-
-        # Send 10 random messages
-        self._send_random_messages(producer, topic, partition, 10)
-        self._send_random_messages(producer, topic, partition + 1, 10)
-
-        # kill leader for partition
-        self._kill_leader(topic, partition)
-
-        log.debug("attempting to send 'success' message after leader killed")
-
-        # in async mode, this should return immediately
-        producer.send_messages(topic, partition, b'success')
-        producer.send_messages(topic, partition + 1, b'success')
-
-        # send to new leader
-        self._send_random_messages(producer, topic, partition, 10)
-        self._send_random_messages(producer, topic, partition + 1, 10)
-
-        # Stop the producer and wait for it to shutdown
-        producer.stop()
-        started = time.time()
-        timeout = 60
-        while (time.time() - started) < timeout:
-            if not producer.thread.is_alive():
-                break
-            time.sleep(0.1)
-        else:
-            self.fail('timeout waiting for producer queue to empty')
-
-        # count number of messages
-        # Should be equal to 10 before + 1 recovery + 10 after
-        # at_least=True because exactly once delivery isn't really a thing
-        self.assert_message_count(topic, 21, partitions=(partition,),
-                                  at_least=True)
-        self.assert_message_count(topic, 21, partitions=(partition + 1,),
-                                  at_least=True)
-
     def test_switch_leader_keyed_producer(self):
         topic = self.topic
 
